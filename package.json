@@ -1,0 +1,29 @@
+{
+  "name": "mapty-exercise",
+  "version": "1.0.0",
+  "description": "A modular workout mapping application",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "live-server --open=index.html",
+    "dev": "live-server --watch=src --open=index.html",
+    "build": "echo 'No build process configured for vanilla JS'",
+    "test": "echo 'No tests configured'"
+  },
+  "keywords": [
+    "javascript",
+    "leaflet",
+    "maps",
+    "workout",
+    "geolocation",
+    "spa"
+  ],
+  "author": "AugustoArand",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
