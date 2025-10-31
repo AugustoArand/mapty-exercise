@@ -70,4 +70,11 @@ export class MapService {
     getMap() {
         return this.#map;
     }
+
+    /**
+     * Getter público para o mapa
+     */
+    get map() {
+        return this.#map;
+    }
 }

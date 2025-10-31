@@ -9,14 +9,17 @@ src/
 ├── models/           # Classes de domínio
 │   ├── Workout.js    # Classe base para exercícios
 │   ├── Running.js    # Classe para corrida
-│   └── Cycling.js    # Classe para ciclismo
+│   ├── Cycling.js    # Classe para ciclismo
+│   └── PlannedRoute.js # Classe para rotas planejadas
 ├── services/         # Lógica de negócio
 │   ├── GeolocationService.js  # Gerenciamento de geolocalização
 │   ├── MapService.js          # Gerenciamento do mapa
-│   └── StorageService.js      # Gerenciamento do localStorage
+│   ├── StorageService.js      # Gerenciamento do localStorage
+│   └── RouteService.js        # Gerenciamento de rotas planejadas
 ├── ui/               # Componentes de interface
 │   ├── FormManager.js         # Gerenciamento do formulário
-│   └── WorkoutListManager.js  # Gerenciamento da lista
+│   ├── WorkoutListManager.js  # Gerenciamento da lista
+│   └── RouteManager.js        # Gerenciamento das rotas planejadas
 ├── utils/            # Utilitários
 │   ├── ValidationUtils.js     # Validações
 │   └── DOMUtils.js           # Manipulação do DOM
@@ -32,11 +35,13 @@ src/
 - ✅ **Persistência**: Salva dados no localStorage
 - ✅ **Interface Responsiva**: Formulário dinâmico baseado no tipo
 - ✅ **Navegação**: Clique nos exercícios para ir ao local no mapa
+- 🆕 **Rotas Planejadas**: Crie, salve e gerencie percursos antes dos exercícios
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **JavaScript ES6+ Modules**
 - **Leaflet.js** para mapas
+- **Leaflet Routing Machine** para rotas planejadas
 - **Geolocation API**
 - **localStorage API**
 - **CSS3** para styling
@@ -78,6 +83,13 @@ Abra o arquivo `index.html` em um servidor web local ou use a extensão Live Ser
 4. **Submeter**: Pressione Enter ou clique OK
 5. **Navegar**: Clique nos exercícios da lista para ir ao local
 
+### 🗺️ **Rotas Planejadas (NOVO!)**
+1. **Criar Rota**: Clique no botão ➕ na seção "Rotas Planejadas"
+2. **Adicionar Pontos**: Clique no mapa para criar waypoints (mínimo 2)
+3. **Ajustar**: Arraste os marcadores para posicionar melhor
+4. **Salvar**: Clique "💾 Salvar Rota" e dê um nome
+5. **Usar**: Clique "🏃‍♂️ Iniciar Exercício" para treinar na rota
+
 ## 🔧 Benefícios da Modularização
 
 ### ✅ **Separação de Responsabilidades**
@@ -100,6 +112,7 @@ Abra o arquivo `index.html` em um servidor web local ou use a extensão Live Ser
 - Fácil adição de novos tipos de exercício
 - Simples inclusão de novas funcionalidades
 - Estrutura preparada para crescimento
+- Sistema de rotas planejadas modular e extensível
 
 ### ✅ **Testabilidade**
 - Cada módulo pode ser testado independentemente
@@ -127,6 +140,15 @@ class Swimming extends Workout {
         return this.efficiency;
     }
 }
+
+// Criar rota planejada programaticamente
+import { PlannedRoute } from './src/models/PlannedRoute.js';
+
+const route = new PlannedRoute('Minha Rota', [
+    [40.7829, -73.9654],  // Central Park
+    [40.7681, -73.9808],  // Sheep Meadow
+    [40.7505, -73.9934]   // Columbus Circle
+]);
 ```
 
 ## 🎨 Personalização
@@ -136,6 +158,11 @@ class Swimming extends Workout {
 2. Estenda `Workout`
 3. Atualize `App.js` para reconhecer o tipo
 4. Modifique o HTML para incluir a opção
+
+### Personalizar Rotas Planejadas
+- Modifique `src/services/RouteService.js` para alterar cálculos
+- Use `src/ui/RouteManager.js` para customizar interface
+- Estenda `src/models/PlannedRoute.js` para novos campos
 
 ### Personalizar Interface
 - Modifique `src/ui/` para alterar componentes
@@ -181,10 +208,32 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para detalhes.
 - Sem reutilização
 
 **Depois (modular):**
-- 9 módulos especializados
+- 12 módulos especializados
 - Responsabilidades claras
 - Fácil manutenção e teste
 - Código reutilizável e escalável
+- Sistema de rotas planejadas integrado
+
+## 🗺️ **Nova Funcionalidade: Rotas Planejadas**
+
+### **O que é?**
+Sistema completo para criar, salvar e gerenciar percursos antes de realizar exercícios físicos.
+
+### **Como funciona?**
+1. **Criação**: Clique no mapa para adicionar waypoints
+2. **Cálculo**: Distância e duração calculadas automaticamente
+3. **Persistência**: Rotas salvas no localStorage
+4. **Execução**: Inicie exercícios baseados nas rotas planejadas
+
+### **Benefícios:**
+- 📋 **Planejamento**: Organize seus treinos com antecedência
+- 📏 **Precisão**: Rotas calculadas com dados reais
+- 🎯 **Objetivos**: Defina metas específicas de distância
+- 📊 **Análise**: Acompanhe dificuldade e estatísticas
+- 🔄 **Reutilização**: Use a mesma rota múltiplas vezes
+
+### **Documentação Detalhada**
+Para informações completas sobre rotas planejadas, consulte: [`ROTAS_PLANEJADAS.md`](./ROTAS_PLANEJADAS.md)
 
 
 

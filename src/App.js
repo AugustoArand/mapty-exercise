@@ -2,12 +2,15 @@
 
 import { Running } from './models/Running.js';
 import { Cycling } from './models/Cycling.js';
+import { PlannedRoute } from './models/PlannedRoute.js';
 import { GeolocationService } from './services/GeolocationService.js';
 import { MapService } from './services/MapService.js';
 import { StorageService } from './services/StorageService.js';
+import { RouteService } from './services/RouteService.js';
 import { ValidationUtils } from './utils/ValidationUtils.js';
 import { FormManager } from './ui/FormManager.js';
 import { WorkoutListManager } from './ui/WorkoutListManager.js';
+import { RouteManager } from './ui/RouteManager.js';
 
 /**
  * Classe principal da aplicação Mapty
@@ -15,18 +18,24 @@ import { WorkoutListManager } from './ui/WorkoutListManager.js';
 export class App {
     #mapEvent;
     #workouts = [];
+    #plannedRoutes = [];
     #mapService;
     #formManager;
     #workoutListManager;
+    #routeManager;
+    #routeService;
 
     constructor() {
         // Inicializa componentes
         this.#mapService = new MapService();
         this.#formManager = new FormManager();
         this.#workoutListManager = new WorkoutListManager();
+        this.#routeManager = new RouteManager();
+        this.#routeService = new RouteService();
 
         // Carrega dados salvos
         this.#loadStoredWorkouts();
+        this.#loadStoredRoutes();
 
         // Inicializa aplicação
         this.#init();
@@ -51,6 +60,14 @@ export class App {
     #bindEvents() {
         this.#formManager.onSubmit(this.#newWorkout.bind(this));
         this.#workoutListManager.onWorkoutClick(this.#moveToPopup.bind(this));
+        
+        // Eventos do gerenciador de rotas
+        this.#routeManager.onCreateRouteHandler(this.#handleCreateRoute.bind(this));
+        this.#routeManager.onViewRouteHandler(this.#handleViewRoute.bind(this));
+        this.#routeManager.onEditRouteHandler(this.#handleEditRoute.bind(this));
+        this.#routeManager.onDeleteRouteHandler(this.#handleDeleteRoute.bind(this));
+        this.#routeManager.onStartRouteHandler(this.#handleStartRoute.bind(this));
+        this.#routeManager.onToggleVisibilityHandler(this.#handleToggleRouteVisibility.bind(this));
     }
 
     /**
@@ -76,6 +93,11 @@ export class App {
         // Renderiza workouts existentes no mapa
         this.#workouts.forEach(workout => {
             this.#mapService.addWorkoutMarker(workout.coords, workout);
+        });
+
+        // Renderiza rotas existentes no mapa
+        this.#plannedRoutes.forEach(route => {
+            this.#routeService.renderSavedRoute(route, this.#mapService.map);
         });
     }
 
@@ -217,8 +239,170 @@ export class App {
      */
     reset() {
         StorageService.clearWorkouts();
+        this.#clearRoutes();
         this.#workouts = [];
+        this.#plannedRoutes = [];
         this.#workoutListManager.clearWorkoutsList();
+        this.#routeManager.clearRoutes();
         location.reload();
+    }
+
+    // ====================== MÉTODOS PARA ROTAS PLANEJADAS ======================
+
+    /**
+     * Carrega rotas do localStorage
+     */
+    #loadStoredRoutes() {
+        const storedRoutes = StorageService.loadPlannedRoutes();
+        
+        this.#plannedRoutes = storedRoutes.map(data => {
+            return PlannedRoute.fromJSON(data);
+        }).filter(Boolean);
+
+        // Renderiza rotas carregadas na lista
+        this.#plannedRoutes.forEach(route => {
+            this.#routeManager.addRoute(route);
+        });
+    }
+
+    /**
+     * Salva rotas no localStorage
+     */
+    #setRoutesStorage() {
+        StorageService.savePlannedRoutes(this.#plannedRoutes);
+    }
+
+    /**
+     * Limpa todas as rotas
+     */
+    #clearRoutes() {
+        StorageService.clearPlannedRoutes();
+    }
+
+    /**
+     * Manipula criação de nova rota
+     */
+    #handleCreateRoute() {
+        if (!this.#mapService.map) {
+            alert('Aguarde o mapa carregar antes de criar uma rota.');
+            return;
+        }
+
+        this.#routeService.startRouteCreation(
+            this.#mapService.map,
+            this.#onRouteCreated.bind(this)
+        );
+    }
+
+    /**
+     * Callback quando rota é criada
+     * @param {PlannedRoute} route - Rota criada
+     */
+    #onRouteCreated(route) {
+        this.#plannedRoutes.push(route);
+        this.#routeManager.addRoute(route);
+        this.#setRoutesStorage();
+        
+        // Renderiza no mapa
+        this.#routeService.renderSavedRoute(route, this.#mapService.map);
+        
+        console.log('Rota criada:', route);
+    }
+
+    /**
+     * Manipula visualização de rota
+     * @param {PlannedRoute} route - Rota a ser visualizada
+     */
+    #handleViewRoute(route) {
+        if (route.waypoints.length > 0) {
+            // Centraliza mapa na rota
+            const bounds = L.latLngBounds(route.waypoints);
+            this.#mapService.map.fitBounds(bounds, { padding: [20, 20] });
+        }
+    }
+
+    /**
+     * Manipula edição de rota
+     * @param {PlannedRoute} route - Rota a ser editada
+     */
+    #handleEditRoute(route) {
+        const newName = prompt('Novo nome da rota:', route.name);
+        
+        if (newName && newName.trim() && newName !== route.name) {
+            route.name = newName.trim();
+            route._setDescription();
+            
+            this.#routeManager.updateRoute(route);
+            this.#setRoutesStorage();
+        }
+    }
+
+    /**
+     * Manipula exclusão de rota
+     * @param {PlannedRoute} route - Rota a ser excluída
+     */
+    #handleDeleteRoute(route) {
+        // Remove do array
+        this.#plannedRoutes = this.#plannedRoutes.filter(r => r.id !== route.id);
+        
+        // Remove da interface
+        this.#routeManager.removeRoute(route.id);
+        
+        // Atualiza storage
+        this.#setRoutesStorage();
+        
+        console.log('Rota excluída:', route.name);
+    }
+
+    /**
+     * Manipula início de exercício baseado na rota
+     * @param {PlannedRoute} route - Rota a ser iniciada
+     * @param {string} exerciseType - Tipo de exercício
+     */
+    #handleStartRoute(route, exerciseType) {
+        if (!route.isValid()) {
+            alert('Rota inválida. Deve ter pelo menos 2 pontos.');
+            return;
+        }
+
+        // Simula click no primeiro ponto da rota para iniciar o exercício
+        const firstPoint = route.waypoints[0];
+        const fakeMapEvent = {
+            latlng: {
+                lat: firstPoint[0],
+                lng: firstPoint[1]
+            }
+        };
+
+        this.#mapEvent = fakeMapEvent;
+        this.#formManager.showForm();
+        
+        // Define tipo de exercício automaticamente
+        const typeSelect = document.querySelector('.form__input--type');
+        if (typeSelect) {
+            typeSelect.value = exerciseType;
+            typeSelect.dispatchEvent(new Event('change'));
+        }
+
+        // Pré-preenche distância se disponível
+        const distanceInput = document.querySelector('.form__input--distance');
+        if (distanceInput && route.distance > 0) {
+            distanceInput.value = route.distance.toFixed(1);
+        }
+
+        // Move mapa para o ponto inicial
+        this.#mapService.moveToCoordinates(firstPoint);
+        
+        alert(`Exercício iniciado! Preencha os dados do formulário.\nRota: ${route.name}\nDistância estimada: ${route.distance.toFixed(1)} km`);
+    }
+
+    /**
+     * Manipula alternância de visibilidade das rotas no mapa
+     * @param {boolean} visible - Se rotas devem ser visíveis
+     */
+    #handleToggleRouteVisibility(visible) {
+        // Esta funcionalidade pode ser implementada futuramente
+        // para mostrar/ocultar rotas no mapa dinamicamente
+        console.log(`Rotas ${visible ? 'mostradas' : 'ocultadas'} no mapa`);
     }
 }
